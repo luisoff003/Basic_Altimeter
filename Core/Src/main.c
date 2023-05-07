@@ -26,6 +26,9 @@
 #include "BMX055.h"
 #include "bmp280.h"
 #include "math.h"
+#include "fatfs_sd.h"
+#include "string.h"
+#include "stdio.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -86,6 +89,11 @@ int main(void)
 	uint8_t size = 0;
 	uint8_t readData;
 	uint8_t writeData;
+	
+	/* This variables are used for SD CARD */
+	FATFS fs;
+	FIL file;
+	FRESULT res;
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -136,6 +144,53 @@ int main(void)
 //  	HAL_UART_Transmit(&huart1, Data, size, 1000);
 //	CDC_Transmit_FS(buffer,size);		/* Transmit over USB wire */
 
+  /** SD Section */
+
+  // Initialize the SD card
+  if (disk_initialize(0) != RES_OK) {
+	  while(1);
+  }
+
+  // Mount the SD card
+  if (f_mount(&fs, "", 1) != FR_OK) {
+	  while(1);
+  }
+
+  // Open a file for writing
+  if (f_open(&file, "test.txt", FA_CREATE_ALWAYS | FA_WRITE) != FR_OK) {
+	  while(1);
+  }
+
+  // Write data to the file
+  char data[] = "Hello, world!";
+  UINT bytes_written;
+  if (f_write(&file, data, sizeof(data), &bytes_written) != FR_OK) {
+	  while(1);
+  }
+
+  // Close the file
+  f_close(&file);
+
+  // Open the file for reading
+  if (f_open(&file, "test.txt", FA_READ) != FR_OK) {
+	  while(1);
+  }
+
+  // Read data from the file
+  char buffer[32];
+  UINT bytes_read;
+  if (f_read(&file, buffer, sizeof(buffer), &bytes_read) != FR_OK) {
+	  while(1);
+  }
+
+  // Close the file
+  f_close(&file);
+
+  // Unmount the SD card
+  f_mount(NULL, "", 0);
+
+  /** SD END Section */
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -143,8 +198,6 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
-
 
 	  /* Read BMP280 sensor every 2s */
 	  while (!bmp280_read_float(&bmp280, &temperature, &pressure, &humidity)  && false) {
